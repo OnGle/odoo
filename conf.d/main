@@ -5,6 +5,7 @@
  
 DB_USER=openerp
 DB_PASS=$(mcookie)
+DB_NAME=openerp
 
 # We will use a random password for now. Set it during inithook
 ODOO_ADMIN_PASSWORD=$(mcookie)
@@ -14,12 +15,15 @@ SERVICE_USER=$DB_USER
 
 OPENERP_DIR=/opt/openerp
 ODOO_DIR=$OPENERP_DIR/odoo
-CONF=/etc/odoo/openerp-server.conf
+CONF=/etc/odoo/odoo.conf #/etc/odoo/openerp-server.conf
 
+# Install odoo from third party repo
+apt-get update
+apt-get install odoo
 
 # Install deps that can't be installed via package using pip
 # *******************************************
-pip install psycogreen
+pip3 install psycogreen
 
 
 # Create database role for odoo
@@ -35,9 +39,13 @@ su postgres -c "createuser --superuser --createdb --no-createrole $DB_USER"
 su postgres -c "psql postgres" << EOF
 alter user $DB_USER with encrypted password '$DB_PASS';
 EOF
+su postgres -c "psql postgres" << EOF
+create database $DB_NAME owner $DB_USER;
+EOF
 
 # Set password in config file
 sed -i "s|db_password =.*|db_password = $DB_PASS|" $CONF
+sed -i "s|db_name =.*|db_name = $DB_NAME|" $CONF
 
 # Stop postgresql server
 /etc/init.d/postgresql stop
@@ -57,19 +65,20 @@ sed -i "s|db_password =.*|db_password = $DB_PASS|" $CONF
 #  ours on http://nightly.odoo.com/extra/.
 # ---------------------------------------------------------------------------
 #
-cd /tmp
-[ "$FAB_HTTP_PROXY" ] && export HTTP_PROXY=$FAB_HTTP_PROXY
-wget http://nightly.odoo.com/extra/wkhtmltox-0.12.1.2_linux-jessie-amd64.deb
-unset HTTP_PROXY
-dpkg -i wkhtmltox-*.deb
-ln -s /usr/local/bin/wkhtmltopdf /usr/bin/wkhtmltopdf
-ln -s /usr/local/bin/wkhtmltoimage /usr/bin/wkhtmltoimage
+
+#cd /tmp
+#[ "$FAB_HTTP_PROXY" ] && export HTTP_PROXY=$FAB_HTTP_PROXY
+#wget http://nightly.odoo.com/extra/wkhtmltox-0.12.1.2_linux-jessie-amd64.deb
+#unset HTTP_PROXY
+#dpkg -i wkhtmltox-*.deb
+#ln -s /usr/local/bin/wkhtmltopdf /usr/bin/wkhtmltopdf
+#ln -s /usr/local/bin/wkhtmltoimage /usr/bin/wkhtmltoimage
 
 
 
 # Install Odoo from GIT repo
 #
-git clone https://github.com/odoo/odoo.git --branch 8.0 --depth=1 $ODOO_DIR
+git clone https://github.com/odoo/odoo.git --branch 11.0 --depth=1 $ODOO_DIR
 
 
 # Set admin password to random value for now
@@ -90,20 +99,20 @@ update-rc.d openerp-server defaults
 # Change ownership for Odoo config file
 chown $SERVICE_USER /etc/odoo/openerp-server.conf
 
-# Create /var/lib/odoo
-mkdir /var/lib/odoo
-chown -R $SERVICE_USER:$SERVICE_USER /var/lib/odoo
-
-# Create log files
-mkdir /var/log/odoo
-chmod 775 /var/log/odoo
-touch /var/log/odoo/openerp-server.log
-touch /var/log/odoo/openerp-server-startup.log
-chmod 664 /var/log/odoo/*.log 
-chown -R $SERVICE_USER /var/log/odoo
-
-# Set Odoo app directory owner
-chown -R $SERVICE_USER:$SERVICE_USER $OPENERP_DIR
+# # Create /var/lib/odoo
+# mkdir /var/lib/odoo
+# chown -R $SERVICE_USER:$SERVICE_USER /var/lib/odoo
+# 
+# # Create log files
+# mkdir /var/log/odoo
+# chmod 775 /var/log/odoo
+# touch /var/log/odoo/openerp-server.log
+# touch /var/log/odoo/openerp-server-startup.log
+# chmod 664 /var/log/odoo/*.log 
+# chown -R $SERVICE_USER /var/log/odoo
+# 
+# # Set Odoo app directory owner
+# chown -R $SERVICE_USER:$SERVICE_USER $OPENERP_DIR
 
 # Perform apache config		
 #
