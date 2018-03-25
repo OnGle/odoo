@@ -18,7 +18,7 @@ CONF=/etc/odoo/odoo.conf #/etc/odoo/openerp-server.conf
 
 # Install odoo from third party repo
 apt-get update
-apt-get install odoo
+apt-get install -y odoo
 
 # Install deps that can't be installed via package using pip
 # *******************************************
